@@ -3,6 +3,11 @@ __pycache__/
 *$py.class
 build/
 dist/
+release_assets/
+release_notes.md
+.venv/
+venv/
+*.spec.bak
 *.log
 build_log.txt
 .tmp_*
@@ -11,3 +16,5 @@ build_log.txt
 *.sqlite3-shm
 *.sqlite3-journal
 .env
+.DS_Store
+Thumbs.db

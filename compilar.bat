@@ -1,7 +1,12 @@
 @echo off
 chcp 65001 >nul
-cd /d "T:\codigos\tradutor_livros"
+cd /d "%~dp0"
 taskkill /F /IM TradutorLivros.exe >nul 2>&1
 echo Iniciando compilacao com PyInstaller... > build.log
-C:\Python314\python.exe -m PyInstaller --noconfirm --clean --onedir --windowed --name "TradutorLivros" --exclude-module pymupdf_layout --exclude-module pymupdf4llm --exclude-module onnxruntime --exclude-module scipy --exclude-module numpy "T:\codigos\tradutor_livros\book_translator.py" >> build.log 2>&1
+if exist "C:\Python314\python.exe" (
+    set "PY_BIN=C:\Python314\python.exe"
+) else (
+    set "PY_BIN=python"
+)
+"%PY_BIN%" -m PyInstaller --noconfirm --clean "%~dp0TradutorLivros.spec" >> build.log 2>&1
 echo EXIT_CODE=%ERRORLEVEL% >> build.log

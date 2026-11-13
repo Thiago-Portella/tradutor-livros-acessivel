@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da release (ex.: v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve target tag
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          "TARGET_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run full verification and compile executable
+        run: python tools/dev.py check
+
+      - name: Generate release notes from commit history
+        shell: pwsh
+        run: |
+          $tag = $env:TARGET_TAG
+          $tagExists = $false
+          git rev-parse -q --verify "refs/tags/$tag" *> $null
+          if ($LASTEXITCODE -eq 0) { $tagExists = $true }
+          $endRef = if ($tagExists) { $tag } else { "HEAD" }
+          $prevTag = (git tag --sort=-v:refname | Where-Object { $_ -ne $tag } | Select-Object -First 1)
+          if ($prevTag) {
+              $commits = git log "$prevTag..$endRef" --pretty=format:"- %s (%h)"
+          } else {
+              $commits = git log -n 20 "$endRef" --pretty=format:"- %s (%h)"
+          }
+          if (-not $commits) {
+              $commits = "- Lançamento da versão $tag"
+          }
+          $header = "### Alterações em $tag`n`n"
+          ($header + ($commits -join "`n")) | Out-File -FilePath release_notes.md -Encoding utf8
+
+      - name: Package ZIP and latest.json with parity check
+        shell: pwsh
+        run: |
+          python tools/build_release_assets.py `
+            --tag "$env:TARGET_TAG" `
+            --repo "${{ github.repository }}" `
+            --dist-dir "dist/TradutorLivros" `
+            --out-dir "release_assets" `
+            --notes-file "release_notes.md"
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:TARGET_TAG
+          $exists = $false
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { $exists = $true }
+          if ($exists) {
+              gh release upload $tag "release_assets/TradutorLivros-win64.zip" "release_assets/latest.json" --clobber
+              gh release edit $tag --title "Tradutor de Livros $tag" --notes-file "release_notes.md"
+          } else {
+              gh release create $tag "release_assets/TradutorLivros-win64.zip" "release_assets/latest.json" `
+                --title "Tradutor de Livros $tag" `
+                --notes-file "release_notes.md"
+          }

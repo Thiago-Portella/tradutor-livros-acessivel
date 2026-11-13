@@ -2,8 +2,8 @@
 
 
 a = Analysis(
-    ['T:/codigos/tradutor_livros/book_translator.py'],
-    pathex=[],
+    ['book_translator.py'],
+    pathex=['.'],
     binaries=[],
     datas=[],
     hiddenimports=[],
