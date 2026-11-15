@@ -7,7 +7,10 @@ from typing import Optional
 
 import wx
 
-from src.controllers.gui_update_dialog import attach_help_menu_and_startup_check
+from src.controllers.gui_update_dialog import (
+    attach_help_menu_and_startup_check,
+    open_help_manual_from_gui,
+)
 from src.controllers.gui_workflow_tab import BookWorkflowTab
 from src.domain.version import APP_NAME, APP_VERSION
 
@@ -44,7 +47,11 @@ class BookProcessorFrame(wx.Frame):
         self.Center()
 
     def _on_char_hook(self, event: wx.KeyEvent) -> None:
-        if event.GetKeyCode() == wx.WXK_ESCAPE and wx.GetActiveWindow() is self:
+        code = event.GetKeyCode()
+        if code == wx.WXK_F1:
+            open_help_manual_from_gui(self)
+            return
+        if code == wx.WXK_ESCAPE and wx.GetActiveWindow() is self:
             if not self.tab_translate._is_running and not self.tab_enhance._is_running:
                 self.Close()
                 return

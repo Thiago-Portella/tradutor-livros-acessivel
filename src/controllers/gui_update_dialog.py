@@ -12,6 +12,7 @@ import wx
 
 from src.domain.update_models import DevelopmentModeUpdateError, ReleaseManifest, UpdateCheckResult
 from src.domain.version import APP_NAME, APP_VERSION, GITHUB_REPO, RELEASES_PAGE_URL
+from src.services.help_manual_service import open_user_manual
 from src.services.self_update_service import (
     check_for_updates,
     prepare_and_stage_update,
@@ -180,10 +181,25 @@ def trigger_update_check(frame: wx.Frame, manual: bool = True) -> None:
     threading.Thread(target=_worker, daemon=True).start()
 
 
+def open_help_manual_from_gui(frame: wx.Frame) -> Optional[str]:
+    """Gera e abre o Manual Completo em HTML5 no navegador padrão com tratamento seguro."""
+    try:
+        return open_user_manual()
+    except Exception as exc:
+        wx.MessageBox(
+            f"Não foi possível abrir o manual do usuário:\n{exc}",
+            "Erro ao Abrir Manual",
+            wx.OK | wx.ICON_ERROR,
+            parent=frame,
+        )
+        return None
+
+
 def show_about_dialog(frame: wx.Frame) -> None:
-    """Exibe informações acessíveis de versão e repositório oficial."""
+    """Exibe informações acessíveis de versão, manual F1 e repositório oficial."""
     wx.MessageBox(
         f"{APP_NAME}\nVersão instalada: v{APP_VERSION}\n\n"
+        "Pressione F1 a qualquer momento para abrir o Manual Completo em HTML no navegador.\n\n"
         f"Repositório oficial no GitHub:\nhttps://github.com/{GITHUB_REPO}",
         "Sobre o Tradutor de Livros",
         wx.OK | wx.ICON_INFORMATION,
@@ -192,15 +208,17 @@ def show_about_dialog(frame: wx.Frame) -> None:
 
 
 def attach_help_menu_and_startup_check(frame: wx.Frame, enable_startup_check: bool = True) -> None:
-    """Anexa barra de menu Ajuda acessível (F5 / Sobre) e agenda checagem silenciosa."""
+    """Anexa barra de menu Ajuda acessível (F1 / F5 / Sobre) e agenda checagem silenciosa."""
     menubar = wx.MenuBar()
     help_menu = wx.Menu()
+    item_manual = help_menu.Append(wx.ID_HELP, "&Manual do Usuário (HTML)...\tF1")
     item_check = help_menu.Append(wx.ID_ANY, "&Verificar Atualizações...\tF5")
     help_menu.AppendSeparator()
     item_about = help_menu.Append(wx.ID_ABOUT, "&Sobre o Tradutor de Livros...")
     menubar.Append(help_menu, "A&juda")
     frame.SetMenuBar(menubar)
 
+    frame.Bind(wx.EVT_MENU, lambda _evt: open_help_manual_from_gui(frame), item_manual)
     frame.Bind(wx.EVT_MENU, lambda _evt: trigger_update_check(frame, manual=True), item_check)
     frame.Bind(wx.EVT_MENU, lambda _evt: show_about_dialog(frame), item_about)
     if enable_startup_check:

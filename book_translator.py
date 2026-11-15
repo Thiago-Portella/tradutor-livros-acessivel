@@ -16,6 +16,7 @@ from src.domain.update_models import DevelopmentModeUpdateError
 from src.domain.version import APP_NAME, APP_VERSION
 from src.policies.path_policy import get_default_cache_path, get_default_output_path
 from src.services.book_pipeline import enhance_only_book_pipeline, translate_book_pipeline
+from src.services.help_manual_service import open_user_manual
 from src.services.self_update_service import (
     check_for_updates,
     prepare_and_stage_update,
@@ -160,6 +161,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cli", action="store_true", help="Executa em linha de comando sem GUI")
     parser.add_argument("--gui", action="store_true", help="Abre a interface gráfica acessível")
     parser.add_argument("-V", "--version", action="store_true", help="Exibe a versão atual e encerra")
+    parser.add_argument("--help-manual", action="store_true", help="Gera o manual completo em HTML5 e abre no navegador padrão")
     parser.add_argument("--check-update", action="store_true", help="Verifica se há nova versão no GitHub Releases")
     parser.add_argument("--apply-update", action="store_true", help="Baixa e aplica a atualização disponível (apenas no .exe)")
     return parser
@@ -216,6 +218,10 @@ def main() -> int:
     args = parser.parse_args()
     if args.version:
         print(f"{APP_NAME} v{APP_VERSION}")
+        return 0
+    if args.help_manual:
+        path = open_user_manual()
+        print(f"Manual do usuário gerado e aberto no navegador: {path}")
         return 0
     if args.check_update:
         return _run_cli_update_check()
